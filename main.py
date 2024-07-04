@@ -99,7 +99,7 @@ if __name__ == "__main__":
     else:
         try:
             with open(arguments.target, 'r') as file:
-                arguments.targets = [target.strip() for target in file.read().split('\n') if target != '']
+                arguments.target = [target.strip() for target in file.read().split('\n') if target != '']
         except FileNotFoundError:
             arguments.target = arguments.target.split(',')
         except Exception as error:
@@ -156,7 +156,7 @@ if __name__ == "__main__":
         arguments.threads = thread_count
     if not arguments.write:
         arguments.write = f"{date.today()} {strftime('%H_%M_%S', localtime())}.csv"
-    total_servers = len(arguments.targets)
+    total_servers = len(arguments.target)
     display('+', f"Total Target Servers = {Back.MAGENTA}{total_servers}{Back.RESET}")
     display('+', f"Total Credentials    = {Back.MAGENTA}{len(arguments.credentials)}{Back.RESET}")
     t1 = time()
