@@ -1,9 +1,12 @@
 #! /usr/bin/env python3
 
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
 from datetime import date
 from optparse import OptionParser
 from colorama import Fore, Back, Style
-from time import strftime, localtime
+from time import strftime, localtime, time, sleep
 
 status_color = {
     '+': Fore.GREEN,
@@ -21,6 +24,34 @@ def get_arguments(*args):
     for arg in args:
         parser.add_option(arg[0], arg[1], dest=arg[2], help=arg[3])
     return parser.parse_args()[0]
+
+def login(browser, target, username, password, delay=1):
+    t1 = time()
+    browser.get(f"http://{target}")
+    while True:
+        try:
+            form = browser.find_element(By.TAG_NAME, "form")
+            break
+        except NoSuchElementException:
+            sleep(delay)
+        except Exception as error:
+            t2 = time()
+            return error, t2-t1
+    url = browser.current_url
+    input_tags = form.find_elements(By.TAG_NAME, "input")
+    username_tag = input_tags[0]
+    password_tag = input_tags[1]
+    username_tag.send_keys(username)
+    password_tag.send_keys(password)
+    submit_buttons = form.find_elements(By.TAG_NAME, "button")
+    for submit_button in submit_buttons:
+        if "login" in submit_button.text.lower():
+            submit_button.click()
+    if browser.current_url == url:
+        t2 = time()
+        return False, t2-t1
+    t2 = time()
+    return True, t2-t1
 
 if __name__ == "__main__":
     arguments = get_arguments(('-t', "--target", "target", "Target Servers (Seperated by ',' or File Name)"),
