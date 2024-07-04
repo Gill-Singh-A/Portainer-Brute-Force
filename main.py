@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-import requests, json
+import requests
 from datetime import date
 from optparse import OptionParser
 from multiprocessing import Pool, cpu_count, Lock
