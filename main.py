@@ -34,31 +34,35 @@ delay_check = 1
 
 def login(browser, target, username, password, delay=1):
     t1 = time()
-    browser.get(f"http://{target}")
-    while True:
-        try:
-            form = browser.find_element(By.TAG_NAME, "form")
-            break
-        except NoSuchElementException:
-            sleep(delay)
-        except Exception as error:
+    try:
+        browser.get(f"http://{target}")
+        while True:
+            try:
+                form = browser.find_element(By.TAG_NAME, "form")
+                break
+            except NoSuchElementException:
+                sleep(delay)
+            except Exception as error:
+                t2 = time()
+                return error, t2-t1
+        url = browser.current_url
+        input_tags = form.find_elements(By.TAG_NAME, "input")
+        username_tag = input_tags[0]
+        password_tag = input_tags[1]
+        username_tag.send_keys(username)
+        password_tag.send_keys(password)
+        submit_buttons = form.find_elements(By.TAG_NAME, "button")
+        for submit_button in submit_buttons:
+            if "login" in submit_button.text.lower():
+                submit_button.click()
+        if browser.current_url == url:
             t2 = time()
-            return error, t2-t1
-    url = browser.current_url
-    input_tags = form.find_elements(By.TAG_NAME, "input")
-    username_tag = input_tags[0]
-    password_tag = input_tags[1]
-    username_tag.send_keys(username)
-    password_tag.send_keys(password)
-    submit_buttons = form.find_elements(By.TAG_NAME, "button")
-    for submit_button in submit_buttons:
-        if "login" in submit_button.text.lower():
-            submit_button.click()
-    if browser.current_url == url:
+            return False, t2-t1
         t2 = time()
-        return False, t2-t1
-    t2 = time()
-    return True, t2-t1
+        return True, t2-t1
+    except Exception as error:
+        t2 = time()
+        return error, t2-t1
 def loginHandler(thread_index, targets, credentials, delay=1, headless=True):
     successful_logins = {}
     options = Options()
