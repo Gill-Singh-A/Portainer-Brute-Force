@@ -142,8 +142,8 @@ if __name__ == "__main__":
         except:
             display('-', f"Error while Reading File {Back.YELLOW}{arguments.credentials}{Back.RESET}")
             exit(0)
-    if arguments.headless == "True":
-        arguments.headless = True
+    if arguments.headless == "False":
+        arguments.headless = False
     else:
         arguments.headless = headless_mode
     if arguments.delay:
