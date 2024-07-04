@@ -3,7 +3,8 @@ A Simple Python Program that uses Selenium to Brute Force Portainer Web Interfac
 ## Requirements
 Langauge Used = Python3<br />
 Modules/Packages used:
-* selenium
+* requests
+* json
 * datetime
 * optparse
 * multiprocessing
