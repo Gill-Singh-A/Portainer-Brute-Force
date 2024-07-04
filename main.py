@@ -162,7 +162,7 @@ if __name__ == "__main__":
     t1 = time()
     successful_logins = {}
     pool = Pool(arguments.threads)
-    server_divisions = [total_servers[group*total_servers//arguments.threads: (group+1)*total_servers//arguments.threads] for group in range(arguments.threads)]
+    server_divisions = [arguments.target[group*total_servers//arguments.threads: (group+1)*total_servers//arguments.threads] for group in range(arguments.threads)]
     threads = []
     display(':', f"Staring {Back.MAGENTA}{arguments.threads}{Back.RESET} Threads")
     for index, server_division in enumerate(server_divisions):
