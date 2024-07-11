@@ -5,7 +5,7 @@ from datetime import date
 from optparse import OptionParser
 from multiprocessing import Pool, cpu_count, Lock
 from colorama import Fore, Back, Style
-from time import strftime, localtime, time, sleep
+from time import strftime, localtime, time
 
 status_color = {
     '+': Fore.GREEN,
@@ -77,6 +77,7 @@ if __name__ == "__main__":
             arguments.target = arguments.target.split(',')
         except Exception as error:
             display('-', f"Error Occured while Reading File {Back.MAGENTA}{arguments.target}{Back.RESET} => {Back.YELLOW}{error}{Back.RESET}")
+            exit(0)
     if not arguments.credentials:
         if not arguments.users:
             display('-', f"Please specify {Back.YELLOW}Target Users{Back.RESET}")
